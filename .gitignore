@@ -1,0 +1,16 @@
+**/bin/
+**/obj/
+**/TestResults/
+.vs/
+.idea/
+.local/
+data/
+artifacts/
+*.user
+*.log
+*.db
+*.db-shm
+*.db-wal
+appsettings.Local.json
+**/Properties/launchSettings.json
+node_modules/
