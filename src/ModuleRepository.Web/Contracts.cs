@@ -2,6 +2,12 @@ using System.Text.Json;
 
 namespace ModuleRepository.Web;
 
+public sealed record RepositoryAccessSettings(bool RequireLogin);
+public static class BuildInfo
+{
+    public static string Version => typeof(BuildInfo).Assembly.GetName().Version!.ToString(3);
+}
+
 public static class JsonData
 {
     public static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);

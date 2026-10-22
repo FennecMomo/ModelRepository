@@ -4,16 +4,18 @@
 
 ## 认证
 
-管理界面使用 HttpOnly、SameSite=Strict Cookie。所有非 GET/HEAD 的 `/api` 请求都需 `X-CSRF-Token`，值由 `GET /api/session` 返回；登录或退出后重新请求 session 获取与当前身份匹配的 token。
+默认自用模式：接口无需登录、Cookie、令牌或 `X-CSRF-Token`，直接以自用管理员身份操作。`GET /api/session` 返回 `personalMode=true`、`needsSetup=false`、当前管理身份、应用版本，`csrfToken=null`。
 
-访问令牌通过 Authorization Bearer 头发送，仅允许读取获授权模块，不能修改数据、列出令牌或管理账号。客户端应从安全设置读取令牌，不将令牌写入项目。
+可选账号模式：只有设置 `Repository:RequireLogin=true` 才要求登录及写请求的 CSRF。此时管理界面使用 Cookie，CSRF token 由 `/session` 返回；只读访问令牌按原有账号和模块授权读取数据。
+
+账号模式允许空密码、简单数字和 1–80 字符中文账号，取消登录限流和 localhost 初始化限制。
 
 ## 端点
 
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
 | GET | `/session` | 初始化状态、当前账号、CSRF token |
-| POST | `/setup` | 仅本机首次创建管理员；字段 username/password/displayName |
+| POST | `/setup` | 账号模式下首次创建管理员；字段 username/password/displayName，允许内网初始化 |
 | POST | `/login` | 账号密码登录 |
 | POST | `/logout` | 退出 |
 | GET/POST | `/users` | 管理员列出或创建账号 |
@@ -66,7 +68,6 @@
 - 403：已知获授权模块上的操作权限不足，或使用只读令牌写入。
 - 404：模块不存在或不可访问，对这两种情况返回一致信息。
 - 409：ID 不可用、草稿修订过期、当前发布变化、分类仍被使用等冲突。
-- 429：初始化／登录请求限流。
 - 500：存储或内部失败，响应不返回内部路径、调用栈或凭据。
 
 多数错误返回 `{ "error": "说明" }`。框架认证和请求绑定错误可能只返回状态码，客户端应提供对应提示。

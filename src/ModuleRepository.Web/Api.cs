@@ -1,4 +1,3 @@
-using System.Net;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -14,26 +13,26 @@ public static class Api
 {
     public static void MapRepositoryApi(this WebApplication app)
     {
-        app.MapGet("/api/session", async (HttpContext context, RepositoryDb db, IAntiforgery antiforgery) => {
-            var tokens = antiforgery.GetAndStoreTokens(context);
+        app.MapGet("/api/session", async (HttpContext context, RepositoryDb db, IAntiforgery antiforgery, RepositoryAccessSettings access) => {
+            var tokens = access.RequireLogin ? antiforgery.GetAndStoreTokens(context) : null;
             Account? user = null;
             if (context.User.Identity?.IsAuthenticated == true)
                 user = await db.Accounts.AsNoTracking().FindAccountAsync(Security.UserId(context.User));
-            return Results.Ok(new { needsSetup = !await db.Accounts.AnyAsync(),
-                user = user is null ? null : AccountService.View(user), csrfToken = tokens.RequestToken });
+            return Results.Ok(new { needsSetup = access.RequireLogin && !await db.Accounts.AnyAsync(),
+                personalMode = !access.RequireLogin, version = BuildInfo.Version,
+                user = user is null ? null : AccountService.View(user), csrfToken = tokens?.RequestToken });
         });
         app.MapPost("/api/setup", async (CreateAccount input, HttpContext context, AccountService accounts) => {
-            if (!IsLocal(context)) throw new ApiException(403, "首次初始化须从服务所在电脑的 localhost 地址完成。");
             var account = await accounts.CreateAsync(input, bootstrap: true);
             await Security.SignInAsync(context, account);
             return Results.Ok(AccountService.View(account));
-        }).RequireRateLimiting("login");
+        });
         app.MapPost("/api/login", async (Credentials input, HttpContext context, AccountService accounts) => {
             var account = await accounts.LoginAsync(input);
             if (account is null) throw new ApiException(401, "账号或密码错误，或账号已停用。");
             await Security.SignInAsync(context, account);
             return Results.Ok(AccountService.View(account));
-        }).RequireRateLimiting("login");
+        });
 
         var api = app.MapGroup("/api").RequireAuthorization();
         api.MapPost("/logout", async (HttpContext context) => {
@@ -185,12 +184,4 @@ public static class Api
         });
     }
 
-    private static bool IsLocal(HttpContext context)
-    {
-        var remote = context.Connection.RemoteIpAddress;
-        var host = context.Request.Host.Host;
-        return remote is not null && IPAddress.IsLoopback(remote)
-            && (host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
-                || (IPAddress.TryParse(host.Trim('[', ']'), out var address) && IPAddress.IsLoopback(address)));
-    }
 }

@@ -1,5 +1,3 @@
-using System.Net;
-using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -15,6 +13,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
 var paths = new RepositoryPaths(builder.Configuration, builder.Environment);
 builder.Services.AddSingleton(paths);
+var accessSettings = new RepositoryAccessSettings(builder.Configuration.GetValue<bool>("Repository:RequireLogin"));
+builder.Services.AddSingleton(accessSettings);
 builder.Services.AddSingleton<RepositoryGate>();
 builder.Services.AddSingleton<ContentStore>();
 builder.Services.AddDbContext<RepositoryDb>(options => options.UseSqlite(
@@ -30,6 +30,7 @@ var protection = builder.Services.AddDataProtection().SetApplicationName("Module
 if (OperatingSystem.IsWindows()) protection.ProtectKeysWithDpapi();
 builder.Services.AddAuthentication("repository")
     .AddPolicyScheme("repository", null, options => options.ForwardDefaultSelector = context =>
+        !accessSettings.RequireLogin ? Security.PersonalScheme :
         context.Request.Headers.Authorization.ToString().StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
             ? Security.TokenScheme : Security.CookieScheme)
     .AddCookie(Security.CookieScheme, options => {
@@ -41,7 +42,8 @@ builder.Services.AddAuthentication("repository")
         options.SlidingExpiration = true;
         options.EventsType = typeof(CookieValidation);
     })
-    .AddScheme<AuthenticationSchemeOptions, TokenAuthenticationHandler>(Security.TokenScheme, _ => { });
+    .AddScheme<AuthenticationSchemeOptions, TokenAuthenticationHandler>(Security.TokenScheme, _ => { })
+    .AddScheme<AuthenticationSchemeOptions, PersonalAuthenticationHandler>(Security.PersonalScheme, _ => { });
 builder.Services.AddAuthorization();
 builder.Services.AddAntiforgery(options => {
     options.HeaderName = "X-CSRF-Token";
@@ -55,12 +57,6 @@ builder.Services.Configure<FormOptions>(options => {
     options.ValueLengthLimit = 128 * 1024;
 });
 builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = ContentStore.MaxBytes + 2 * 1024 * 1024);
-builder.Services.AddRateLimiter(options => {
-    options.RejectionStatusCode = 429;
-    options.AddPolicy("login", context => RateLimitPartition.GetFixedWindowLimiter(
-        context.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions {
-            PermitLimit = 15, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
-});
 
 var app = builder.Build();
 // A single writer process owns this data directory. Do not run multiple instances against it.
@@ -71,6 +67,9 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<RepositoryDb>();
     await db.Database.EnsureCreatedAsync();
+    if (!accessSettings.RequireLogin)
+        await PersonalAuthenticationHandler.EnsureAccountAsync(db,
+            scope.ServiceProvider.GetRequiredService<IPasswordHasher<Account>>());
     await scope.ServiceProvider.GetRequiredService<ModuleService>().CollectAsync();
 }
 
@@ -107,9 +106,8 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseRateLimiter();
 app.Use(async (context, next) => {
-    if (context.Request.Path.StartsWithSegments("/api")
+    if (accessSettings.RequireLogin && context.Request.Path.StartsWithSegments("/api")
         && !HttpMethods.IsGet(context.Request.Method) && !HttpMethods.IsHead(context.Request.Method))
     {
         if (context.Request.Headers.Authorization.ToString().StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
@@ -124,7 +122,7 @@ app.Use(async (context, next) => {
 });
 
 app.MapRepositoryApi();
-app.MapGet("/health", () => Results.Ok(new { status = "ready", version = "0.1.0" }));
+app.MapGet("/health", () => Results.Ok(new { status = "ready", version = BuildInfo.Version }));
 app.Run();
 
 public partial class Program;

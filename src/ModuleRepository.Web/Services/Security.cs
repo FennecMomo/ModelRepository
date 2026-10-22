@@ -15,6 +15,7 @@ public static class Security
 {
     public const string CookieScheme = "repository-cookie";
     public const string TokenScheme = "repository-token";
+    public const string PersonalScheme = "repository-personal";
 
     public static string UserId(ClaimsPrincipal user) => user.FindFirstValue(ClaimTypes.NameIdentifier)
         ?? throw new ApiException(401, "请先登录。");
@@ -36,17 +37,41 @@ public static class Security
     public static string Username(string value)
     {
         var text = (value ?? "").Trim();
-        if (text.Length is < 3 or > 40 || !text.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.'))
-            throw ApiException.Bad("账号须为 3–40 位英文字母、数字、点、下划线或短横线。");
+        if (text.Length is < 1 or > 80 || text.Any(char.IsControl))
+            throw ApiException.Bad("账号不能为空，且不能超过 80 字符。");
         return text;
     }
     public static void ValidatePassword(string? password)
     {
-        if (password is null || password.Length is < 12 or > 256)
-            throw ApiException.Bad("密码长度须为 12–256 字符。");
+        if (password?.Length > 256)
+            throw ApiException.Bad("密码不能超过 256 字符。");
     }
     public static async Task SignInAsync(HttpContext context, Account account)
         => await context.SignInAsync(CookieScheme, Principal(account, CookieScheme));
+}
+
+public sealed class PersonalAuthenticationHandler(IOptionsMonitor<AuthenticationSchemeOptions> options,
+    ILoggerFactory logger, UrlEncoder encoder, RepositoryDb db)
+    : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
+{
+    protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
+    {
+        var account = await db.Accounts.AsNoTracking().Where(x => x.Enabled && x.IsAdmin)
+            .OrderBy(x => x.Id).FirstOrDefaultAsync();
+        if (account is null) return AuthenticateResult.Fail("自用身份未就绪。");
+        return AuthenticateResult.Success(new(Security.Principal(account, Scheme.Name), Scheme.Name));
+    }
+
+    public static async Task EnsureAccountAsync(RepositoryDb db, IPasswordHasher<Account> hasher)
+    {
+        if (await db.Accounts.AnyAsync(x => x.Enabled && x.IsAdmin)) return;
+        var account = new Account { IsAdmin = true, DisplayName = "自用管理" };
+        account.Username = "self-" + account.Id;
+        account.NormalizedUsername = account.Username.ToUpperInvariant();
+        account.PasswordHash = hasher.HashPassword(account, "");
+        db.Accounts.Add(account);
+        await db.SaveChangesAsync();
+    }
 }
 
 public sealed class TokenAuthenticationHandler(IOptionsMonitor<AuthenticationSchemeOptions> options,
@@ -106,7 +131,7 @@ public sealed class AccountService(RepositoryDb db, RepositoryGate gate, IPasswo
             throw ApiException.Conflict("该账号已存在。");
         var account = new Account { Username = username, NormalizedUsername = normalized,
             DisplayName = Text(input.DisplayName, 80, "显示名称"), IsAdmin = input.IsAdmin || bootstrap };
-        account.PasswordHash = hasher.HashPassword(account, input.Password);
+        account.PasswordHash = hasher.HashPassword(account, input.Password ?? "");
         db.Accounts.Add(account);
         await db.SaveChangesAsync();
         return account;

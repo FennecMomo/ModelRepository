@@ -18,13 +18,14 @@ using ModuleRepository.Web.Services;
 
 namespace ModuleRepository.Tests;
 
-public sealed class RepositoryFactory : WebApplicationFactory<Program>
+public sealed class RepositoryFactory(bool requireLogin = true) : WebApplicationFactory<Program>
 {
     public string DataPath { get; } = Path.Combine(Path.GetTempPath(), "ModuleRepositoryTests", Guid.NewGuid().ToString("N"));
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
         builder.UseSetting("Repository:DataDirectory", DataPath);
+        builder.UseSetting("Repository:RequireLogin", requireLogin.ToString());
         builder.ConfigureLogging(logging => logging.ClearProviders());
         builder.ConfigureServices(services => services.AddSingleton<IStartupFilter, LoopbackFilter>());
     }
@@ -415,5 +416,57 @@ public sealed class RepositoryTests
             displayName="reader",enabled=true,isAdmin=false,newPassword=Password() })).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized,(await user.GetAsync("/api/modules")).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized,(await token.GetAsync("/api/modules")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Personal_mode_opens_without_setup_cookie_csrf_or_token_and_can_publish()
+    {
+        using var factory = new RepositoryFactory(requireLogin: false);
+        using var client = factory.Client();
+        var session = await Json(await client.GetAsync("/api/session"));
+        Assert.True(session.GetProperty("personalMode").GetBoolean());
+        Assert.False(session.GetProperty("needsSetup").GetBoolean());
+        Assert.True(session.GetProperty("user").GetProperty("isAdmin").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, session.GetProperty("csrfToken").ValueKind);
+        var category = await Category(client);
+        await Create(client, category); await Snippet(client, "self use"); await Publish(client);
+        Assert.Equal("self use", (await Download(client,1))["src/Download.cs"]);
+        // Another fresh client, including stale credentials, also opens directly.
+        using var fresh = factory.Client();
+        fresh.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "stale-token");
+        Assert.Equal(HttpStatusCode.OK, (await fresh.GetAsync("/api/modules/common.download")).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await fresh.PutAsJsonAsync("/api/modules/common.download/enabled", new { enabled=false })).StatusCode);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("1")]
+    public async Task Optional_account_mode_accepts_simple_passwords_and_initialization_from_lan_host(string password)
+    {
+        using var factory = new RepositoryFactory();
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions {
+            BaseAddress = new Uri("http://192.0.2.10"), AllowAutoRedirect = false });
+        await RefreshCsrf(client);
+        await Json(await client.PostAsJsonAsync("/api/setup",new {username="我",password,displayName="自己"}));
+        await RefreshCsrf(client);
+        Assert.Equal(HttpStatusCode.OK,(await client.GetAsync("/api/modules")).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent,(await client.PostAsync("/api/logout",null)).StatusCode);
+        await RefreshCsrf(client);
+        await Json(await client.PostAsJsonAsync("/api/login",new {username="我",password}));
+    }
+
+    [Fact]
+    public async Task Personal_identity_is_persisted_and_does_not_create_new_accounts_on_each_request()
+    {
+        using var factory = new RepositoryFactory(requireLogin: false);
+        using var client = factory.Client();
+        var before = await Json(await client.GetAsync("/api/session"));
+        for (var index=0; index<3; index++) {
+            var session = await Json(await client.GetAsync("/api/session"));
+            Assert.Equal(before.GetProperty("user").GetProperty("id").GetString(), session.GetProperty("user").GetProperty("id").GetString());
+        }
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<RepositoryDb>();
+        Assert.Equal(1, await db.Accounts.CountAsync());
     }
 }
