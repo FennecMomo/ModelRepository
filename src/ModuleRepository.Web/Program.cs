@@ -13,6 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
 var paths = new RepositoryPaths(builder.Configuration, builder.Environment);
 builder.Services.AddSingleton(paths);
+builder.Services.AddSingleton<RepositoryIdentity>();
 var accessSettings = new RepositoryAccessSettings(builder.Configuration.GetValue<bool>("Repository:RequireLogin"));
 builder.Services.AddSingleton(accessSettings);
 builder.Services.AddSingleton<RepositoryGate>();
@@ -67,6 +68,7 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<RepositoryDb>();
     await db.Database.EnsureCreatedAsync();
+    _ = scope.ServiceProvider.GetRequiredService<RepositoryIdentity>();
     if (!accessSettings.RequireLogin)
         await PersonalAuthenticationHandler.EnsureAccountAsync(db,
             scope.ServiceProvider.GetRequiredService<IPasswordHasher<Account>>());

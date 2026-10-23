@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0": {
+      "modulerepository.client": {
+        "type": "Project",
+        "dependencies": {
+          "ModuleRepository.Contracts": "[0.2.0, )"
+        }
+      },
+      "modulerepository.contracts": {
+        "type": "Project"
+      }
+    }
+  }
+}

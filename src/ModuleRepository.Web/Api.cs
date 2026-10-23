@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using ModuleRepository.Web.Persistence;
 using ModuleRepository.Web.Services;
+using ModuleRepository.Contracts;
 
 namespace ModuleRepository.Web;
 
@@ -35,6 +36,7 @@ public static class Api
         });
 
         var api = app.MapGroup("/api").RequireAuthorization();
+        api.MapGet("/repository", (RepositoryIdentity identity) => Results.Ok(new RepositoryInfo(identity.Id, BuildInfo.Version)));
         api.MapPost("/logout", async (HttpContext context) => {
             await context.SignOutAsync(Security.CookieScheme);
             return Results.NoContent();
@@ -138,6 +140,8 @@ public static class Api
         });
         api.MapGet("/modules/{id}", async (string id, ClaimsPrincipal user, ModuleService modules)
             => Results.Ok(await modules.GetAsync(id, user)));
+        api.MapGet("/modules/{id}/manifest", async (string id, ClaimsPrincipal user, ModuleService modules)
+            => Results.Ok(await modules.ManifestAsync(id, user)));
         api.MapPut("/modules/{id}/draft", async (string id, SaveDraft input, ClaimsPrincipal user, ModuleService modules) => {
             if (input.Metadata is null) throw ApiException.Bad("请填写模块信息。");
             await modules.SaveDraftAsync(id, input, user);

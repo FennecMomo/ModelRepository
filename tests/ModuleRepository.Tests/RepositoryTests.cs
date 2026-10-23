@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using ModuleRepository.Web;
 using ModuleRepository.Web.Persistence;
 using ModuleRepository.Web.Services;
+using ModuleRepository.Contracts;
 
 namespace ModuleRepository.Tests;
 

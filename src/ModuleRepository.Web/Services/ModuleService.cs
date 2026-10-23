@@ -4,11 +4,12 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using ModuleRepository.Web.Persistence;
+using ModuleRepository.Contracts;
 
 namespace ModuleRepository.Web.Services;
 
 public sealed partial class ModuleService(RepositoryDb db, RepositoryGate gate, ContentStore store,
-    ILogger<ModuleService> logger)
+    ILogger<ModuleService> logger, RepositoryIdentity identity)
 {
     [GeneratedRegex("^[a-z0-9][a-z0-9._-]{1,79}$")]
     private static partial Regex ModuleIdPattern();
@@ -95,6 +96,20 @@ public sealed partial class ModuleService(RepositoryDb db, RepositoryGate gate, 
         // Multipart parsing happens after this early authorization check. Do not retain a
         // tracked draft that could become stale while the upload body is being read.
         db.ChangeTracker.Clear();
+    }
+
+    public async Task<PublishedModuleManifest> ManifestAsync(string id, ClaimsPrincipal actor)
+    {
+        using var held = await gate.EnterAsync();
+        var (module, _, _) = await AccessAsync(id, actor);
+        if (!module.Enabled || module.PublishedJson is null) throw ApiException.Missing();
+        return new PublishedModuleManifest {
+            RepositoryId = identity.Id, ModuleId = module.Id, Version = module.PublishedVersion!,
+            Revision = module.Revision, ContentHash = module.ContentHash!, PublishedAt = module.PublishedAt!.Value,
+            ChangeNotes = module.ChangeNotes ?? "", Metadata = JsonData.Read<ModuleMetadata>(module.PublishedJson),
+            Files = await db.Files.AsNoTracking().Where(x => x.ModuleId == id && x.Kind == "published")
+                .OrderBy(x => x.Path).Select(x => new ModuleFileInfo(x.Path, x.Hash, x.Size)).ToListAsync()
+        };
     }
 
     private async Task<object> FileViewsAsync(string id, string kind) => await db.Files.AsNoTracking()

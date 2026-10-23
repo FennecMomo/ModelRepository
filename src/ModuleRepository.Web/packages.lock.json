@@ -91,6 +91,9 @@
         "dependencies": {
           "SQLitePCLRaw.core": "2.1.12"
         }
+      },
+      "modulerepository.contracts": {
+        "type": "Project"
       }
     }
   }

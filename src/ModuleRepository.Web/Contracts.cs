@@ -1,4 +1,5 @@
 using System.Text.Json;
+using ModuleRepository.Contracts;
 
 namespace ModuleRepository.Web;
 
@@ -28,22 +29,6 @@ public sealed record SnippetInput(string Path, string Content, long ExpectedDraf
 public sealed record DraftFileDelete(string Path, long ExpectedDraftRevision);
 public sealed record TokenInput(string Name);
 public sealed record EnableInput(bool Enabled);
-
-public sealed record ModuleMetadata
-{
-    public string Name { get; init; } = "";
-    public string Summary { get; init; } = "";
-    public string Language { get; init; } = "";
-    public string Environment { get; init; } = "";
-    public string? CategoryId { get; init; }
-    public string[] Tags { get; init; } = [];
-    public string Documentation { get; init; } = "";
-    public string Dependencies { get; init; } = "";
-    public string Limitations { get; init; } = "";
-    public string Validation { get; init; } = "未验证";
-    public string Source { get; init; } = "";
-    public string License { get; init; } = "";
-}
 
 public sealed class ApiException(int status, string message) : Exception(message)
 {

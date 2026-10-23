@@ -513,10 +513,14 @@
           "xunit.extensibility.core": "[2.9.3]"
         }
       },
+      "modulerepository.contracts": {
+        "type": "Project"
+      },
       "modulerepository.web": {
         "type": "Project",
         "dependencies": {
-          "Microsoft.EntityFrameworkCore.Sqlite": "[10.0.12, )"
+          "Microsoft.EntityFrameworkCore.Sqlite": "[10.0.12, )",
+          "ModuleRepository.Contracts": "[0.2.0, )"
         }
       }
     }

@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../ModuleRepository.Contracts/ModuleRepository.Contracts.csproj" />
+  </ItemGroup>
+</Project>
