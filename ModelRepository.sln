@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModuleRepository.Client", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModuleRepository.Cli", "src\ModuleRepository.Cli\ModuleRepository.Cli.csproj", "{0BCB9E44-689F-4536-98ED-9CA4CC6F7498}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModuleRepository.Mcp", "src\ModuleRepository.Mcp\ModuleRepository.Mcp.csproj", "{B11B46BB-E6C9-4F96-B01B-182BB7B1C628}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -87,6 +89,18 @@ Global
 		{0BCB9E44-689F-4536-98ED-9CA4CC6F7498}.Release|x64.Build.0 = Release|Any CPU
 		{0BCB9E44-689F-4536-98ED-9CA4CC6F7498}.Release|x86.ActiveCfg = Release|Any CPU
 		{0BCB9E44-689F-4536-98ED-9CA4CC6F7498}.Release|x86.Build.0 = Release|Any CPU
+		{B11B46BB-E6C9-4F96-B01B-182BB7B1C628}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B11B46BB-E6C9-4F96-B01B-182BB7B1C628}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B11B46BB-E6C9-4F96-B01B-182BB7B1C628}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B11B46BB-E6C9-4F96-B01B-182BB7B1C628}.Debug|x64.Build.0 = Debug|Any CPU
+		{B11B46BB-E6C9-4F96-B01B-182BB7B1C628}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B11B46BB-E6C9-4F96-B01B-182BB7B1C628}.Debug|x86.Build.0 = Debug|Any CPU
+		{B11B46BB-E6C9-4F96-B01B-182BB7B1C628}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B11B46BB-E6C9-4F96-B01B-182BB7B1C628}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B11B46BB-E6C9-4F96-B01B-182BB7B1C628}.Release|x64.ActiveCfg = Release|Any CPU
+		{B11B46BB-E6C9-4F96-B01B-182BB7B1C628}.Release|x64.Build.0 = Release|Any CPU
+		{B11B46BB-E6C9-4F96-B01B-182BB7B1C628}.Release|x86.ActiveCfg = Release|Any CPU
+		{B11B46BB-E6C9-4F96-B01B-182BB7B1C628}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -97,5 +111,6 @@ Global
 		{A13CDD49-54B4-40FA-B3E8-E97EC6355B40} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{F3AB4981-F6EF-4F5A-BE63-C3C3508E9F8C} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{0BCB9E44-689F-4536-98ED-9CA4CC6F7498} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{B11B46BB-E6C9-4F96-B01B-182BB7B1C628} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 EndGlobal

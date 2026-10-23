@@ -355,4 +355,4 @@ V1 交付物：
 4. 复用 Skill 与 Agent 接入说明。
 5. 至少一个真实多文件模块及完整发布、安装、更新验证记录。
 
-当前进度：阶段 A 已提供服务端和 Web 管理界面，默认自用免登录，也保留可选账号与权限。阶段 B 已实现共享协议、.NET 客户端库和 CLI，提供下载核对、目录计划、安装记录、覆盖更新与主动检查更新，见 `stage-b-usage.md`。阶段 B 仅完成必要构建与正常多文件链路冒烟，后续测试见 `backend-pending-tests.md`。阶段 C 的 MCP 与 Skill 尚未实现；本机验证不代表远程部署或完整 V1 验收。
+当前进度：阶段 A 已提供服务端和 Web 管理界面，默认自用免登录，也保留可选账号与权限。阶段 B 已实现共享协议、.NET 客户端库和 CLI，见 `stage-b-usage.md`；三环境同源码交叉复用结果见 `stage-b-cross-environment-results.md`。阶段 C 已实现共用安装逻辑的stdio MCP、Skill和本机接入脚本，完成真实MCP正常链路冒烟，见 `stage-c-usage.md`。后续未测试项见 `backend-pending-tests.md`；宿主自动选择Skill及全面 V1 验收尚未完成，不将结构校验或协议调用等同于实际Agent自动行为验证。

@@ -12,8 +12,9 @@
 - [阶段 A 验证记录](docs/stage-a-validation.md)
 - [阶段 B 本地接入与接口说明](docs/stage-b-usage.md)
 - [后端待测试清单](docs/backend-pending-tests.md)
+- [阶段 C MCP 与 Skill 接入](docs/stage-c-usage.md)
 
-## 当前实现：0.2.0 / 阶段 A、B
+## 当前实现：0.3.0 / 阶段 A、B、C
 
 已实现模块管理、分类标签、账号与模块权限、草稿上传、当前内容发布、授权下载和响应式 Web 界面。服务端采用 ASP.NET Core 10 + SQLite，文件按内容哈希存储。
 
@@ -32,4 +33,6 @@ dotnet build ModelRepository.sln -c Release
 pwsh -File .\scripts\module-repo.ps1 --help
 ```
 
-阶段 B 的必要正常链路冒烟已通过，未进行全面测试；详细验证范围和未测试项见上述文档。MCP 和复用 Skill 尚未实现，属于阶段 C。当前版本只保留模块最新内容，不提供旧版源码备份、下载或回退。
+阶段 C 已提供本地 stdio MCP 和 module-repository Skill，复用阶段 B 安装逻辑。运行 `pwsh -File .\scripts\Install-AgentIntegration.ps1` 发布工具并注册到本机 Codex，新会话可自动发现 Skill，也可明确使用 `$module-repository`。
+
+必要正常链路冒烟已通过，未进行全面测试；详细验证范围和未测试项见上述文档。当前版本只保留模块最新内容，不提供旧版源码备份、下载或回退。
